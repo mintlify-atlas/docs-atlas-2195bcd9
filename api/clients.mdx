@@ -1,0 +1,59 @@
+---
+title: "Clients API — create and manage customer records"
+description: "REST endpoints to create, retrieve, update, and deactivate client records. Includes DNI lookup and contract listing. SALE_EMPLOYEE role required to create."
+---
+
+The Clients API manages the people who subscribe to telecom services. Clients must exist before contracts and claims can be created for them.
+
+## Endpoints
+
+| Method | Path | Role required |
+|--------|------|---------------|
+| GET | `/api/clients` | Any authenticated |
+| GET | `/api/clients/{id}` | Any authenticated |
+| GET | `/api/clients/dni/{dni}` | Any authenticated |
+| GET | `/api/clients/{id}/contracts` | Any authenticated |
+| POST | `/api/clients` | `SALE_EMPLOYEE` |
+| PUT | `/api/clients/{id}` | Any authenticated |
+| DELETE | `/api/clients/{id}` | Any authenticated |
+
+## Create a client
+
+**`POST /api/clients`**
+
+<ParamField body="name" type="string" required>First name.</ParamField>
+<ParamField body="lastName" type="string" required>Last name.</ParamField>
+<ParamField body="dni" type="string" required>National ID number. Must be unique across all persons.</ParamField>
+<ParamField body="email" type="string" required>Email address. Must be unique across all persons.</ParamField>
+<ParamField body="phone" type="string" required>Contact phone number.</ParamField>
+<ParamField body="address" type="string" required>Physical address.</ParamField>
+<ParamField body="tipoCliente" type="string" required>Client category (e.g., `RESIDENTIAL`, `COMMERCIAL`).</ParamField>
+
+Returns HTTP 201 with the created client including its `id`.
+
+## Look up a client by DNI
+
+**`GET /api/clients/dni/{dni}`**
+
+```bash
+curl http://localhost:8080/api/clients/dni/45678901 \
+  -H "Authorization: Bearer <token>"
+```
+
+## List a client's contracts
+
+**`GET /api/clients/{id}/contracts`**
+
+Returns HTTP 200 with the contract list, or HTTP 204 if the client has no contracts.
+
+## Update a client
+
+**`PUT /api/clients/{id}`**
+
+Only `email`, `phone`, and `address` can be updated. `dni` and name fields are immutable.
+
+## Deactivate a client
+
+**`DELETE /api/clients/{id}`**
+
+Soft-deactivates the client record. Returns the deactivated client or HTTP 404.

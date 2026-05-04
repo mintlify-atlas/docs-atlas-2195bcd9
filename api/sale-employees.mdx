@@ -1,0 +1,45 @@
+---
+title: "Sale Employees API — create and manage commercial staff"
+description: "REST endpoints to create, retrieve, update, and deactivate Sale Employee records, and to list the claims they have registered in the system."
+---
+
+Sale Employees are the commercial staff who register claims on behalf of clients. Each Sale Employee has an auto-generated file number (`nroLegajo`) and a separate user account for authentication.
+
+## Endpoints
+
+| Method | Path | Role required |
+|--------|------|---------------|
+| GET | `/api/SaleEmployee` | Any authenticated |
+| GET | `/api/SaleEmployee/{id}` | Any authenticated |
+| GET | `/api/SaleEmployee/dni/{dni}` | Any authenticated |
+| GET | `/api/SaleEmployee/{id}/claims-registered` | Any authenticated |
+| POST | `/api/SaleEmployee` | `ADMIN` or `SALE_EMPLOYEE` |
+| PUT | `/api/SaleEmployee/{id}` | Any authenticated |
+| DELETE | `/api/SaleEmployee/{id}` | Any authenticated |
+
+## Create a Sale Employee
+
+**`POST /api/SaleEmployee`**
+
+<ParamField body="name" type="string" required>First name.</ParamField>
+<ParamField body="lastName" type="string" required>Last name.</ParamField>
+<ParamField body="dni" type="string" required>National ID. Must be unique.</ParamField>
+<ParamField body="email" type="string" required>Email. Must be unique.</ParamField>
+<ParamField body="phone" type="string" required>Phone number.</ParamField>
+<ParamField body="address" type="string" required>Address.</ParamField>
+
+Returns HTTP 201. The response includes the auto-generated `nroLegajo` (format: `LEG0001`, `LEG0002`, ...).
+
+## List registered claims
+
+**`GET /api/SaleEmployee/{id}/claims-registered`**
+
+Returns all claims this employee has filed, or HTTP 404 if the employee is not found.
+
+## Update
+
+**`PUT /api/SaleEmployee/{id}`** — updates `email`, `phone`, and `address`. `dni` and name are immutable.
+
+## Deactivate
+
+**`DELETE /api/SaleEmployee/{id}`** — soft-deactivates the record.

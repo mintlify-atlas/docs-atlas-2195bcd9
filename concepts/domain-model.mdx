@@ -1,0 +1,147 @@
+---
+title: "Domain model: claims, clients, contracts, and employees"
+description: "Explore the Claims Management System's core entities — Client, Contract, Claim, Employee, Transfer, and Solution — and how they relate to each other."
+---
+
+The Claims Management System is built around a set of JPA entities that model the full lifecycle of a telecom support claim. Understanding how these entities relate to each other is essential before working with the API: a claim cannot exist without a client and a contract, an assignment requires a technically qualified employee, and resolution produces a solution record that closes the loop.
+
+## People and employees
+
+All human participants in the system share a common base entity, `Person`, which is mapped using JPA joined-table inheritance. `Client` and `Employee` are the two direct subtypes. `Employee` is itself abstract, with `SaleEmployee` and `TechnicalEmployee` as its concrete subtypes.
+
+```java
+// Person (abstract) — table: personas
+Long id
+String name
+String lastName
+String dni         // unique, 7–15 digits
+String email       // unique
+String phone
+String address
+LocalDateTime fechaRegistro   // set on @PrePersist
+User user          // OneToOne — the login credential
+
+// Client extends Person — table: clientes
+String tipoCliente
+List<Contract> contracts   // OneToMany
+List<Claim> claims         // OneToMany
+
+// Employee (abstract) extends Person
+String nroLegajo   // employee file number, generated on creation
+boolean enabled    // set to true on @PrePersist; use disable() to deactivate
+
+// SaleEmployee extends Employee
+List<Claim> claimsRegistered   // claims registered by this employee (OneToMany via join table)
+
+// TechnicalEmployee extends Employee
+List<ClaimType> claimTypes     // ManyToMany — fault types this technician handles
+List<Product> products         // ManyToMany — telecom services this technician covers
+List<Claim> claimsAssigned     // ManyToMany — pending claims currently assigned
+List<Claim> claimsResolved     // ManyToMany — claims this technician has resolved
+```
+
+The joined-table strategy means each subtype has its own table while sharing the `personas` primary key. A `TechnicalEmployee` record, for example, exists in `personas`, `employee`, and `technicalemployee`.
+
+## Claims
+
+A `Claim` represents a customer complaint or fault report. It links a client to one of their contracts and carries a fault type and urgency classification.
+
+```java
+// Claim — table: claim
+Long id
+Client client           // ManyToOne
+Contract contract       // ManyToOne
+ClaimType claimType     // ManyToOne — category of the fault
+Classification classification   // enum: URGENT | CRITICAL
+String currentStatus    // convenience field kept in sync with latest history entry
+String description      // free-text description from the customer
+List<ClaimHistory> claimHistory   // OneToMany — ordered audit log
+Solution solution       // OneToOne — populated when claim is resolved
+List<Transfer> transfers          // OneToMany — transfer records
+```
+
+`ClaimType` is a simple entity with a `name` field. Four types are seeded on startup by `DataInitializer`:
+
+| ID | Name |
+|----|------|
+| 1 | Sin Servicio |
+| 2 | Oscilación |
+| 3 | Cable Dañado |
+| 4 | Poste Dañado |
+
+## Contracts and products
+
+A `Contract` links a `Client` to a `Product` — a telecom service offering such as TV, Internet, or IP Telephony. The assignment engine uses the contract's product to match a claim to a technically qualified employee.
+
+```java
+// Contract — table: contract
+Long id
+Client client           // ManyToOne
+Product product         // ManyToOne (via contracts_products join table)
+LocalDateTime fechaAlta // set to now on @PrePersist; contract activation date
+LocalDateTime fechaBaja // set when deleteContract() is called
+Boolean enabled         // true on creation; false on cancellation
+
+// Product — table: productos
+Long id
+String name
+Double price
+String description
+```
+
+Each client can hold multiple contracts, one per service. A claim must reference one of the client's active contracts so the system knows which product is affected.
+
+## Audit and history
+
+Three entities capture the evolution of a claim after it is registered.
+
+**ClaimHistory** records every status change throughout the claim's life. Each entry is immutable once persisted; new entries are always appended.
+
+```java
+// ClaimHistory — table: claimhistory
+Long id
+LocalDateTime registrationDate   // set on @PrePersist
+ClaimStatus status               // ManyToOne — the status at this point
+String observation               // human-readable note about the transition
+Employee employee                // ManyToOne — who performed the action
+Solution solution                // OneToOne — linked only on resolution entries
+Claim claim                      // ManyToOne — back-reference to the parent claim
+```
+
+**Transfer** records when a claim is handed off from one technician to another. The originating technician, the receiving technician, the reason, and the timestamp are all captured.
+
+```java
+// Transfer — table: transfer
+Long id
+Employee fromEmployee    // ManyToOne — technician who initiated the transfer
+Employee toEmployee      // ManyToOne — technician who receives the claim
+String motivation        // reason provided by the transferring technician
+LocalDateTime transferDate   // set on @PrePersist
+Claim claim              // ManyToOne — the claim being transferred
+```
+
+**Solution** is created when a `TechnicalEmployee` resolves a claim. It is a `OneToOne` relationship with the claim and is also linked from the final `ClaimHistory` entry.
+
+```java
+// Solution — table: solution
+Long id
+String description           // what was done to fix the problem
+LocalDateTime resolutionDate // set on @PrePersist
+TechnicalEmployee technicalEmployee   // OneToOne — who resolved it
+Claim claim                  // OneToOne — the resolved claim
+```
+
+## Status values
+
+`ClaimStatus` is a reference entity whose instances are seeded on startup. The four values form a progression that mirrors the claim lifecycle.
+
+| Status | Meaning |
+|--------|---------|
+| Alta | The claim has been newly registered by a sale employee. |
+| Asignado | The claim has been automatically assigned to a technical employee. |
+| Transferido | The claim has been handed off to a different technical employee. |
+| Resuelto | The claim has been fully resolved and a solution has been recorded. |
+
+<Note>
+`ClaimStatus` rows are inserted at application startup by `DataInitializer`, which calls `DataServiceImpl.insertData()` as a `CommandLineRunner`. If the rows already exist, the initializer catches the resulting exception and logs a warning rather than failing startup.
+</Note>

@@ -1,0 +1,106 @@
+---
+title: "Claim lifecycle: Alta, Asignado, Transferido, Resuelto"
+description: "Trace a claim's full journey through all four statuses, including the ClaimHistory entries and Transfer records the system creates at each stage."
+---
+
+Every claim in the system follows a well-defined lifecycle. From the moment a sale employee registers a fault report to the point where a technician records a solution, each transition is captured as an immutable audit entry. This makes it straightforward to reconstruct exactly what happened to any claim — who acted, when, and why.
+
+## Lifecycle stages
+
+<Steps>
+  <Step title="Alta — claim registered">
+    A `SaleEmployee` calls `POST /api/claims` with the client ID, contract ID, claim type, classification, and description. The service creates the `Claim` entity with `currentStatus = "Alta"` and immediately appends the first `ClaimHistory` entry:
+
+    - **Status**: Alta
+    - **Observation**: `"Reclamo registrado!"`
+    - **Employee**: the authenticated sale employee
+  </Step>
+
+  <Step title="Asignado — technician assigned">
+    In the same request, the assignment engine runs automatically. It selects the best available `TechnicalEmployee` based on the claim's classification (see [Assignment engine](/concepts/assignment-engine)) and adds them to the claim's `claimsAssigned` list. A second `ClaimHistory` entry is appended:
+
+    - **Status**: Asignado
+    - **Observation**: `"Asignado al empleado tecnico: <id>"`
+    - **Employee**: the assigned technical employee
+
+    Both history entries are persisted in a single transaction, so a claim is never left in `Alta` without an assignment.
+  </Step>
+
+  <Step title="Transferido — claim handed off (optional)">
+    If the assigned technician cannot handle the claim, they call `POST /api/claims/claim-transfer` with the claim ID and a motivation text. The system:
+
+    1. Runs the assignment engine again, excluding the requesting technician.
+    2. Moves the claim from the current technician's `claimsAssigned` to the new technician's list.
+    3. Creates a `Transfer` record linking `fromEmployee` to `toEmployee`.
+    4. Appends a `ClaimHistory` entry:
+
+    - **Status**: Transferido
+    - **Observation**: `"Reclamo transferido del empleado tecnico con ID: <from> al empleado tecnico con ID: <to>. Motivo: <motivation>"`
+    - **Employee**: the receiving technician
+
+    This step can repeat multiple times; each transfer adds another `Transfer` record and another history entry.
+  </Step>
+
+  <Step title="Resuelto — claim resolved">
+    The currently assigned technician calls `POST /api/claims/resolved-claim` with the claim ID and a solution description. The service:
+
+    1. Creates a `Solution` entity linked to the claim and the technician.
+    2. Moves the claim from `claimsAssigned` to `claimsResolved` on the technician.
+    3. Sets `currentStatus = "Resuelto"` on the claim.
+    4. Appends the final `ClaimHistory` entry with a reference to the `Solution`:
+
+    - **Status**: Resuelto
+    - **Observation**: `"Reclamo solucionado por el empleado tecnico con ID: <id>"`
+    - **Employee**: the resolving technician
+    - **Solution**: linked solution entity
+  </Step>
+</Steps>
+
+## Claim history
+
+`ClaimHistory` is an append-only audit log. Entries are never updated or deleted. When you query the lifecycle endpoint, the history is always returned ordered by `registrationDate` ascending, giving you the full chronological sequence of events.
+
+`GET /api/claims/{id}/lifecycle` returns a `ClaimLifeCycleDto`:
+
+```json
+{
+  "claimId": 42,
+  "currentStatus": "Resuelto",
+  "classification": "URGENT",
+  "history": [
+    {
+      "status": "Alta",
+      "observation": "Reclamo registrado!",
+      "employee": "3",
+      "date": "01/05/2026 09:00:00"
+    },
+    {
+      "status": "Asignado",
+      "observation": "Asignado al empleado tecnico: 7",
+      "employee": "7",
+      "date": "01/05/2026 09:00:01"
+    },
+    {
+      "status": "Resuelto",
+      "observation": "Reclamo solucionado por el empleado tecnico con ID: 7",
+      "employee": "7",
+      "date": "02/05/2026 14:30:00"
+    }
+  ],
+  "transfers": []
+}
+```
+
+The `transfers` list contains one entry per `Transfer` record, ordered by `transferDate` ascending. Each entry includes `fromEmployee`, `toEmployee`, `date`, and `motivation`.
+
+## Immutability guarantees
+
+The lifecycle data is designed to be trustworthy:
+
+- **History entries are never deleted.** Once a `ClaimHistory` row is persisted, no code path removes it. `orphanRemoval = true` is set on the `Claim → ClaimHistory` relationship only to handle cascaded claim deletions, not individual entry removal.
+- **Transfers are append-only.** Each `Transfer` record is a permanent record of a handoff event.
+- **`currentStatus` is a convenience field.** It is kept in sync with the latest transition so callers can read the current state without joining through history. The authoritative record is always the most recent `ClaimHistory` entry.
+
+<Tip>
+Use `GET /api/claims/{id}/lifecycle` as your first tool when investigating a support escalation. The ordered history and transfer records give you a complete, timestamped picture of everything that happened to the claim.
+</Tip>

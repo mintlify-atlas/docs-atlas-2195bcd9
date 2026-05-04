@@ -1,133 +1,57 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
-icon: 'star'
+title: "Claims Management System: Telecom Incident Automation API"
+description: "Spring Boot REST API that automates telecom service claims — from commercial registration through intelligent assignment to technical resolution and audit."
 ---
 
-## Setting up
+The Claims Management System is a backend REST API built with Spring Boot for telecommunications companies to manage service incidents end-to-end. It automates claim registration, routes incidents to the right technical employee using business rules, tracks every status change with a full audit trail, and supports claim transfers between specialists with complete traceability.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get the API running and make your first claim in minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Authentication" icon="lock" href="/authentication">
+    Obtain a JWT token and authenticate all API requests
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="API Reference" icon="code" href="/api/claims/overview">
+    Full endpoint documentation with request and response schemas
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Core Concepts" icon="book" href="/concepts/domain-model">
+    Understand the domain model, lifecycle, and assignment engine
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## How it works
 
-Everything you need to create world-class documentation.
+The system models the complete journey of a telecom service incident through four stages: registration, assignment, transfer (optional), and resolution.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+<Steps>
+  <Step title="Register a claim">
+    A commercial employee logs an incident by identifying the client, affected service contract, claim type, and urgency classification (Urgent or Critical).
+  </Step>
+  <Step title="Automatic assignment">
+    The assignment engine selects the best technical employee based on the classification: the least-loaded expert for Urgent claims, or the most experienced expert for Critical claims.
+  </Step>
+  <Step title="Transfer if needed">
+    A technical employee can transfer a claim to another qualified expert, recording the motivation and updating the audit history automatically.
+  </Step>
+  <Step title="Resolve the claim">
+    The assigned technical employee records the solution description. The system sets the claim to Resolved, logs the resolution date, and links the solution to the audit history.
+  </Step>
+</Steps>
 
-## Make your content agent ready
+## Key capabilities
 
-Make your docs work for humans and AI agents alike.
-
-<Columns cols={2}>
-  <Card
-    title="Prompt component"
-    icon="robot"
-    href="/agent-ready/prompt"
-  >
-    Embed shareable AI prompts readers can copy or open in Cursor.
+<CardGroup cols={2}>
+  <Card title="Intelligent assignment engine" icon="brain">
+    Automatically routes Urgent claims to the least-loaded expert, and Critical claims to the most experienced — no manual triage needed.
   </Card>
-  <Card
-    title="Visibility"
-    icon="eye"
-    href="/agent-ready/visibility"
-  >
-    Show different content to humans and agents reading your docs.
+  <Card title="Full audit trail" icon="timeline">
+    Every status transition — Alta, Asignado, Transferido, Resuelto — is recorded in an immutable history with timestamps and employee references.
   </Card>
-  <Card
-    title="Contextual menu"
-    icon="bolt"
-    href="/agent-ready/contextual"
-  >
-    Give readers one-click access to Claude, ChatGPT, Cursor, and more.
+  <Card title="Role-based access control" icon="shield">
+    Fine-grained permissions: Sale Employees register claims, Technical Employees resolve them, and Admins manage users. JWT tokens carry role claims.
   </Card>
-  <Card
-    title="AI coding tools"
-    icon="wand-magic-sparkles"
-    href="/ai-tools/claude-code"
-  >
-    Set up Claude Code, Cursor, or Windsurf with Mintlify's skill.
+  <Card title="OpenAPI / Swagger UI" icon="file-code">
+    Interactive API documentation available at `/swagger-ui/index.html` once the server is running — no authentication required to browse.
   </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+</CardGroup>

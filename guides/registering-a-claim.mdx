@@ -1,0 +1,69 @@
+---
+title: "How to register a telecom service claim as a Sale Employee"
+description: "Step-by-step guide for Sale Employees: look up the client, find the contract, choose a claim type and classification, then submit the claim for auto-assignment."
+---
+
+Registering a claim is the entry point for any telecom service incident. A Sale Employee creates the claim by specifying the affected client, their service contract, the type of fault, and a classification (URGENT or CRITICAL). The system immediately auto-assigns a qualified Technical Employee.
+
+<Note>
+You must be authenticated with the `SALE_EMPLOYEE` role. The client and contract must already exist before filing a claim.
+</Note>
+
+## Steps
+
+<Steps>
+  <Step title="Authenticate">
+    Obtain a JWT token via `POST /login`. See [Authentication](/authentication) for details.
+  </Step>
+  <Step title="Look up the client">
+    Find the client by national ID number:
+    ```bash
+    curl http://localhost:8080/api/clients/dni/45678901 \
+      -H "Authorization: Bearer <token>"
+    ```
+    Note the `id` field in the response — you'll need it as `clientId`.
+  </Step>
+  <Step title="Find the client's contract">
+    List the client's active contracts:
+    ```bash
+    curl http://localhost:8080/api/clients/1/contracts \
+      -H "Authorization: Bearer <token>"
+    ```
+    Note the `id` field — you'll use this as `contractId`.
+  </Step>
+  <Step title="Submit the claim">
+    ```bash
+    curl -X POST http://localhost:8080/api/claims \
+      -H "Authorization: Bearer <token>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "clientId": 1,
+        "contractId": 2,
+        "claimTypeId": 1,
+        "classification": "URGENT",
+        "description": "Customer has no internet service since this morning"
+      }'
+    ```
+    On success (HTTP 201), the response includes the claim `id` and `currentStatus: "Asignado"` — the system has already auto-assigned a technician.
+  </Step>
+</Steps>
+
+## Classification guide
+
+| Classification | Use when | Assignment strategy |
+|---|---|---|
+| `URGENT` | Service outage or degradation needing fast response | Routes to technician with fewest active claims |
+| `CRITICAL` | Complex fault requiring deep expertise | Routes to technician with most resolved claims |
+
+## Claim type reference
+
+| ID | Name | Description |
+|---|---|---|
+| 1 | Sin Servicio | Total service loss |
+| 2 | Oscilación | Intermittent service drops |
+| 3 | Cable Dañado | Physical cable damage |
+| 4 | Poste Dañado | Utility pole damage |
+
+<Tip>
+See [Assignment engine](/concepts/assignment-engine) to understand exactly how technicians are selected.
+</Tip>

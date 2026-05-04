@@ -1,0 +1,129 @@
+{
+  "projectType": "api-service",
+  "projectName": "Claims Management System",
+  "projectDescription": "A Spring Boot REST API for automating the full lifecycle of telecom service claims — from commercial registration to technical resolution — with JWT authentication and role-based access control.",
+  "theme": "luma",
+  "primaryColor": "#1E6FD9",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/domain-model",
+              "concepts/claim-lifecycle",
+              "concepts/assignment-engine",
+              "concepts/roles-and-permissions"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/registering-a-claim",
+              "guides/transferring-and-resolving",
+              "guides/managing-employees",
+              "guides/managing-clients-and-contracts"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth"
+            ]
+          },
+          {
+            "group": "Claims",
+            "pages": [
+              "api/claims/overview",
+              "api/claims/transfer",
+              "api/claims/resolve"
+            ]
+          },
+          {
+            "group": "Clients & Contracts",
+            "pages": [
+              "api/clients",
+              "api/contracts",
+              "api/products"
+            ]
+          },
+          {
+            "group": "Employees & Users",
+            "pages": [
+              "api/sale-employees",
+              "api/technical-employees",
+              "api/users"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Automated claim registration with intelligent technical employee assignment",
+    "Dual assignment strategies: least-loaded (Urgent) and most-experienced (Critical)",
+    "Full claim lifecycle tracking with immutable audit history and transfer logs",
+    "JWT-based stateless authentication with role-based access control (SALE_EMPLOYEE, TECHNICAL_EMPLOYEE, ADMIN, CLIENT)",
+    "Claim transfer between technical employees with full traceability",
+    "OpenAPI 3 / Swagger UI documentation at /swagger-ui/index.html",
+    "Support for telecom products: TV, Internet, IP Telephony",
+    "Soft-disable for users and employees without data loss"
+  ],
+  "publicApiSurface": [
+    "POST /login",
+    "GET /api/claims",
+    "GET /api/claims/{id}",
+    "POST /api/claims",
+    "GET /api/claims/{id}/lifecycle",
+    "POST /api/claims/claim-transfer",
+    "POST /api/claims/resolved-claim",
+    "GET /api/clients",
+    "GET /api/clients/{id}",
+    "POST /api/clients",
+    "PUT /api/clients/{id}",
+    "DELETE /api/clients/{id}",
+    "GET /api/clients/{id}/contracts",
+    "GET /api/clients/dni/{dni}",
+    "GET /api/contracts",
+    "GET /api/contracts/{id}",
+    "POST /api/contracts",
+    "GET /api/products",
+    "GET /api/products/{id}",
+    "POST /api/products",
+    "PUT /api/products/{id}",
+    "DELETE /api/products/{id}",
+    "GET /api/SaleEmployee",
+    "GET /api/SaleEmployee/{id}",
+    "POST /api/SaleEmployee",
+    "PUT /api/SaleEmployee/{id}",
+    "DELETE /api/SaleEmployee/{id}",
+    "GET /api/SaleEmployee/{id}/claims-registered",
+    "GET /api/TechnicalEmployee",
+    "GET /api/TechnicalEmployee/{id}",
+    "POST /api/TechnicalEmployee",
+    "PUT /api/TechnicalEmployee/{id}",
+    "DELETE /api/TechnicalEmployee/{id}",
+    "GET /api/TechnicalEmployee/{id}/claims-assigned",
+    "GET /api/users",
+    "POST /api/users/employee/register/{id}",
+    "POST /api/users/client/register/{id}",
+    "PUT /api/users/disabled/{username}"
+  ]
+}

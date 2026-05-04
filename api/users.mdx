@@ -1,0 +1,65 @@
+---
+title: "Users API — provision and disable login accounts"
+description: "Admin endpoints to create user accounts for employees or clients, list all users, and soft-disable accounts. Passwords are write-only and never returned."
+---
+
+User accounts are separate from employee and client records. An Admin must explicitly create a user account for each employee or client before they can authenticate with the API.
+
+## Endpoints
+
+| Method | Path | Role required |
+|--------|------|---------------|
+| GET | `/api/users` | Any authenticated |
+| POST | `/api/users/employee/register/{id}` | `ADMIN` |
+| POST | `/api/users/client/register/{id}` | `ADMIN` |
+| PUT | `/api/users/disabled/{username}` | Any authenticated |
+
+## Create a user for an employee
+
+**`POST /api/users/employee/register/{id}`**
+
+`{id}` is the employee's person ID. The system determines the correct role (`ROLE_SALE_EMPLOYEE` or `ROLE_TECHNICAL_EMPLOYEE`) from the employee type automatically.
+
+<ParamField body="username" type="string" required>
+  Login username. 4–10 characters, must be unique.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Password. 8+ characters, must include uppercase, lowercase, digit, and a special character from `@#$%^&+=!`.
+</ParamField>
+
+<ParamField body="admin" type="boolean">
+  Set to `true` to additionally grant `ROLE_ADMIN`. Defaults to `false`.
+</ParamField>
+
+```bash
+curl -X POST http://localhost:8080/api/users/employee/register/3 \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "mgarcia", "password": "Secure@123", "admin": false}'
+```
+
+Returns HTTP 201 with the created user (password field is write-only and not returned).
+
+## Create a user for a client
+
+**`POST /api/users/client/register/{id}`**
+
+`{id}` is the client's person ID. Assigns `ROLE_USER` and `ROLE_CLIENT` automatically.
+
+Same request body as employee registration (without the `admin` flag having effect on client roles).
+
+## List all users
+
+**`GET /api/users`** — returns all user accounts. Passwords are not included in the response.
+
+## Disable a user
+
+**`PUT /api/users/disabled/{username}`**
+
+Soft-disables the account. The user can no longer authenticate but their data is preserved.
+
+```bash
+curl -X PUT http://localhost:8080/api/users/disabled/mgarcia \
+  -H "Authorization: Bearer <token>"
+```

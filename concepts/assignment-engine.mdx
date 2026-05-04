@@ -1,0 +1,72 @@
+---
+title: "Assignment engine: how claims are routed to technicians"
+description: "Learn how the assignment engine picks a technician: least-loaded for URGENT claims, most-experienced for CRITICAL claims, filtered by claim type and product."
+---
+
+When a claim is registered or transferred, the system automatically selects a `TechnicalEmployee` to handle it. You never specify a technician manually; instead, the engine applies one of two selection strategies depending on the claim's `classification`. This keeps workloads balanced for routine faults and routes the most demanding cases to the most proven expert.
+
+## Eligibility criteria
+
+Before any ranking strategy is applied, the engine builds a pool of eligible technicians. A technician is eligible only if they are configured as an expert in **both**:
+
+- the **claim type** — matched against `TechnicalEmployee.claimTypes` (ManyToMany)
+- the **product** on the affected contract — matched against `TechnicalEmployee.products` (ManyToMany)
+
+The repository query is:
+
+```java
+technicalEmployeeRepository.findByClaimTypesIdAndProductsId(
+    claim.getClaimType().getId(),
+    claim.getContract().getProduct().getId()
+);
+```
+
+A technician who handles "Cable Dañado" faults but is not configured for "Internet" will not be considered for a cable claim on an Internet contract, even if they are otherwise available.
+
+## Urgent claims — least loaded
+
+For claims classified as `URGENT`, the engine selects the eligible technician with the **fewest currently assigned (pending) claims**.
+
+```java
+employees.stream()
+    .min(Comparator.comparingInt(TechnicalEmployee::getAssignedClaimsCount))
+    .orElseThrow(...);
+```
+
+`getAssignedClaimsCount()` returns the size of `claimsAssigned` — the list of claims the technician has accepted but not yet resolved.
+
+<Note>
+The least-loaded strategy distributes urgent faults evenly across the available team. No single technician accumulates a backlog while others sit idle.
+</Note>
+
+## Critical claims — most experienced
+
+For claims classified as `CRITICAL`, the engine selects the eligible technician with the **most resolved claims** in their history.
+
+```java
+employees.stream()
+    .max(Comparator.comparingInt(TechnicalEmployee::getResolvedClaimsCount))
+    .orElseThrow(...);
+```
+
+`getResolvedClaimsCount()` returns the size of `claimsResolved` — the cumulative count of all claims this technician has successfully closed.
+
+<Note>
+The most-experienced strategy routes critical faults to the technician with the strongest track record. A technician who has resolved many claims of the same type and product is statistically more likely to resolve a difficult new one efficiently.
+</Note>
+
+## Transfer re-assignment
+
+When a `TechnicalEmployee` requests a transfer (`POST /api/claims/claim-transfer`), the system calls the same assignment engine but **excludes the requesting technician** from the eligible pool:
+
+```java
+experts = experts.stream()
+    .filter(e -> !e.equals(exclude))
+    .toList();
+```
+
+The same classification-based strategy (least-loaded for `URGENT`, most-experienced for `CRITICAL`) is then applied to the remaining eligible technicians.
+
+<Warning>
+If no eligible technician is found — either because no technician is configured for the required claim type and product combination, or because the only eligible technician is the one being excluded — the assignment will throw a `RuntimeException` and the operation will fail. Ensure your technical employees are configured with appropriate `claimTypes` and `products` before registering claims that depend on them.
+</Warning>

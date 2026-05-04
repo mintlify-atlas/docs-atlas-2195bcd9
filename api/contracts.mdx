@@ -1,0 +1,43 @@
+---
+title: "Contracts API — link clients to telecom products"
+description: "REST endpoints for creating and retrieving service contracts that link a client to a telecom product. Contracts are required before claims can be filed."
+---
+
+A contract associates a client with a specific telecom product (e.g., Internet, TV). Every claim must reference a valid contract to identify which service is affected.
+
+## Endpoints
+
+| Method | Path | Role required |
+|--------|------|---------------|
+| GET | `/api/contracts` | Any authenticated |
+| GET | `/api/contracts/{id}` | Any authenticated |
+| POST | `/api/contracts` | `SALE_EMPLOYEE` |
+
+## Create a contract
+
+**`POST /api/contracts`**
+
+<ParamField body="clientId" type="long" required>
+  ID of the client subscribing to the service.
+</ParamField>
+
+<ParamField body="productId" type="long" required>
+  ID of the telecom product being contracted.
+</ParamField>
+
+```bash
+curl -X POST http://localhost:8080/api/contracts \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"clientId": 1, "productId": 2}'
+```
+
+Returns the new contract with `id`, `fechaAlta` (creation timestamp), and `enabled: true`.
+
+## List all contracts
+
+**`GET /api/contracts`** — returns all contracts in the system.
+
+## Get a contract
+
+**`GET /api/contracts/{id}`** — returns the contract or HTTP 404.

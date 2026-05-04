@@ -1,0 +1,97 @@
+---
+title: "Claims API — list, create, and inspect service claims"
+description: "REST endpoints for creating, listing, and inspecting claims, plus fetching the full lifecycle audit history via GET /api/claims/{id}/lifecycle."
+---
+
+The Claims API is the core of the system. Use it to register new service incidents, retrieve claim details, and inspect the complete audit trail for any claim.
+
+## Endpoints
+
+| Method | Path | Role required |
+|--------|------|---------------|
+| GET | `/api/claims` | Any authenticated user |
+| GET | `/api/claims/{id}` | Any authenticated user |
+| POST | `/api/claims` | `SALE_EMPLOYEE` |
+| GET | `/api/claims/{id}/lifecycle` | `SALE_EMPLOYEE` |
+
+## List all claims
+
+**`GET /api/claims`**
+
+Returns all claims in the system.
+
+```bash
+curl http://localhost:8080/api/claims \
+  -H "Authorization: Bearer <token>"
+```
+
+## Get a single claim
+
+**`GET /api/claims/{id}`**
+
+Returns the claim with the given ID, or HTTP 404 if not found.
+
+```bash
+curl http://localhost:8080/api/claims/5 \
+  -H "Authorization: Bearer <token>"
+```
+
+## Create a claim
+
+**`POST /api/claims`** — requires `SALE_EMPLOYEE` role.
+
+<ParamField body="clientId" type="long" required>
+  ID of the client filing the claim.
+</ParamField>
+
+<ParamField body="contractId" type="long" required>
+  ID of the client's affected service contract.
+</ParamField>
+
+<ParamField body="claimTypeId" type="long" required>
+  ID of the claim type (1=Sin Servicio, 2=Oscilación, 3=Cable Dañado, 4=Poste Dañado).
+</ParamField>
+
+<ParamField body="classification" type="string" required>
+  Urgency level: `URGENT` (routes to least-loaded technician) or `CRITICAL` (routes to most-experienced technician).
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Free-text description of the fault.
+</ParamField>
+
+```bash
+curl -X POST http://localhost:8080/api/claims \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clientId": 1,
+    "contractId": 2,
+    "claimTypeId": 1,
+    "classification": "URGENT",
+    "description": "No internet service since this morning"
+  }'
+```
+
+Returns HTTP 201 with the created claim. The claim is automatically assigned (`currentStatus: "Asignado"`) to a Technical Employee.
+
+## Get claim lifecycle
+
+**`GET /api/claims/{id}/lifecycle`** — requires `SALE_EMPLOYEE` role.
+
+Returns the full audit trail: ordered history entries and all transfer records.
+
+```bash
+curl http://localhost:8080/api/claims/5/lifecycle \
+  -H "Authorization: Bearer <token>"
+```
+
+```json
+{
+  "history": [
+    { "status": "Alta", "observation": "Reclamo registrado!", "registrationDate": "2026-05-04T10:00:00" },
+    { "status": "Asignado", "observation": "Asignado al empleado tecnico: 7", "registrationDate": "2026-05-04T10:00:01" }
+  ],
+  "transfers": []
+}
+```

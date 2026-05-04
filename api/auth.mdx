@@ -1,0 +1,58 @@
+---
+title: "POST /login — authenticate and obtain a JWT token"
+description: "Authenticate with username and password to receive a JWT bearer token. Include the token in the Authorization header of every subsequent API request."
+---
+
+The `/login` endpoint accepts JSON credentials and returns a signed JWT token valid for 1 hour. Pass this token in the `Authorization: Bearer <token>` header on all subsequent requests.
+
+## Request
+
+**`POST /login`** — no authentication required.
+
+<ParamField body="username" type="string" required>
+  The account username (4–10 characters).
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account password.
+</ParamField>
+
+```bash
+curl -X POST http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "mgarcia", "password": "Secure@123"}'
+```
+
+## Response
+
+**HTTP 200** on success. The token is returned both in the `Authorization` response header and in the JSON body.
+
+<ResponseField name="token" type="string">
+  Signed JWT bearer token. Include as `Authorization: Bearer <token>` on all subsequent requests.
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  The authenticated username.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message confirming login.
+</ResponseField>
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "username": "mgarcia",
+  "message": "Bienvenido mgarcia, has iniciado sesión de manera exitosa."
+}
+```
+
+## Error responses
+
+| Status | Meaning |
+|--------|---------|
+| 401 | Invalid username or password, or the account is disabled |
+
+<Warning>
+Tokens are invalidated when the server restarts because the signing key is generated fresh on startup.
+</Warning>

@@ -1,0 +1,81 @@
+---
+title: "Creating and managing Sale and Technical Employee records"
+description: "Admin guide: create Sale and Technical Employee records, configure technician expertise (claim types and products), then provision login credentials."
+---
+
+Adding a new employee is a two-step process: first create the employee entity (which generates an employee file number), then provision a user account so they can authenticate with the API.
+
+<Note>
+Creating employee records requires `ADMIN` or `SALE_EMPLOYEE` role. Creating user accounts requires the `ADMIN` role.
+</Note>
+
+## Create a Sale Employee
+
+<Steps>
+  <Step title="Create the employee record">
+    ```bash
+    curl -X POST http://localhost:8080/api/SaleEmployee \
+      -H "Authorization: Bearer <token>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Maria",
+        "lastName": "Garcia",
+        "dni": "12345678",
+        "email": "maria@telco.com",
+        "phone": "555-1234",
+        "address": "123 Main St"
+      }'
+    ```
+    The response includes the auto-generated `nroLegajo` (e.g., `LEG0001`) and the employee `id`.
+  </Step>
+  <Step title="Create the user account">
+    ```bash
+    curl -X POST http://localhost:8080/api/users/employee/register/3 \
+      -H "Authorization: Bearer <admin-token>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "username": "mgarcia",
+        "password": "Secure@123",
+        "admin": false
+      }'
+    ```
+    Set `admin: true` to also grant the `ROLE_ADMIN` role.
+  </Step>
+</Steps>
+
+## Create a Technical Employee
+
+<Steps>
+  <Step title="Create the employee record">
+    Include `claimTypes` and `products` arrays to define this technician's expertise. The assignment engine only routes claims to technicians who match both the claim type and the affected product.
+    ```bash
+    curl -X POST http://localhost:8080/api/TechnicalEmployee \
+      -H "Authorization: Bearer <token>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Carlos",
+        "lastName": "Lopez",
+        "dni": "87654321",
+        "email": "carlos@telco.com",
+        "phone": "555-5678",
+        "address": "456 Oak Ave",
+        "claimTypes": [1, 2],
+        "products": [1]
+      }'
+    ```
+  </Step>
+  <Step title="Create the user account">
+    Same as for Sale Employees — use `POST /api/users/employee/register/{id}` with the new employee's `id`.
+  </Step>
+</Steps>
+
+## Password requirements
+
+<Warning>
+Passwords must be 8 or more characters and contain at least one uppercase letter, one lowercase letter, one digit, and one special character from `@#$%^&+=!`. Spaces are not allowed.
+</Warning>
+
+## Update and deactivate
+
+- **Update** employee details: `PUT /api/SaleEmployee/{id}` or `PUT /api/TechnicalEmployee/{id}` (email, phone, address only — DNI and name are immutable)
+- **Disable** a user account: `PUT /api/users/disabled/{username}` (soft-disable, preserves all data)

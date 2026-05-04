@@ -1,0 +1,65 @@
+---
+title: "How to transfer and resolve claims as a Technical Employee"
+description: "Guide for Technical Employees: transfer a claim to another expert with a stated motivation, or record a solution to set the claim status to Resuelto."
+---
+
+Technical Employees are responsible for resolving assigned claims. When a claim falls outside your area of expertise, you can transfer it to a more suitable colleague. When you have a fix, you record the solution and the system finalizes the claim.
+
+<Note>
+You must be authenticated with the `TECHNICAL_EMPLOYEE` role. You can only act on claims in your own assigned list.
+</Note>
+
+## Transfer a claim
+
+<Steps>
+  <Step title="Submit the transfer">
+    ```bash
+    curl -X POST http://localhost:8080/api/claims/claim-transfer \
+      -H "Authorization: Bearer <token>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "idClaim": 5,
+        "motivation": "Requires fiber optic specialist"
+      }'
+    ```
+    The system re-runs the assignment engine (excluding you) and assigns the next eligible technician. A `Transfer` record and a `ClaimHistory` entry are both created automatically.
+  </Step>
+</Steps>
+
+<Warning>
+You can only transfer claims currently in your assigned list. Attempting to transfer a claim not in your queue will result in an error response.
+</Warning>
+
+## Resolve a claim
+
+<Steps>
+  <Step title="Record the solution">
+    ```bash
+    curl -X POST http://localhost:8080/api/claims/resolved-claim \
+      -H "Authorization: Bearer <token>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "idClaim": 5,
+        "description": "Replaced damaged cable segment at junction box B-14. Service restored."
+      }'
+    ```
+    The system sets `currentStatus` to `"Resuelto"`, creates a `Solution` entity with the current timestamp, and appends a final `ClaimHistory` entry.
+  </Step>
+</Steps>
+
+<Note>
+Resolution is final. Once a claim is resolved it cannot be re-opened through the API.
+</Note>
+
+## Check your assigned claims
+
+```bash
+curl http://localhost:8080/api/TechnicalEmployee/7/claims-assigned \
+  -H "Authorization: Bearer <token>"
+```
+
+Returns a list of all pending claims assigned to that technician. Requires `ADMIN` or `TECHNICAL_EMPLOYEE` role.
+
+<Tip>
+See [Claim lifecycle](/concepts/claim-lifecycle) for a full picture of every status transition and the history records created at each stage.
+</Tip>

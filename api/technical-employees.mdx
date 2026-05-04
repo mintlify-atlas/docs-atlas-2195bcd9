@@ -1,0 +1,63 @@
+---
+title: "Technical Employees API — manage technical staff"
+description: "REST endpoints to create, configure, and manage Technical Employee records including their claim type and product expertise used by the assignment engine."
+---
+
+Technical Employees are the specialists who resolve claims. Each technician is configured with the claim types and products they can handle — the assignment engine only routes claims to technicians who match both the fault type and the affected service.
+
+## Endpoints
+
+| Method | Path | Role required |
+|--------|------|---------------|
+| GET | `/api/TechnicalEmployee` | Any authenticated |
+| GET | `/api/TechnicalEmployee/{id}` | Any authenticated |
+| GET | `/api/TechnicalEmployee/{id}/claims-assigned` | `ADMIN` or `TECHNICAL_EMPLOYEE` |
+| POST | `/api/TechnicalEmployee` | Any authenticated |
+| PUT | `/api/TechnicalEmployee/{id}` | Any authenticated |
+| DELETE | `/api/TechnicalEmployee/{id}` | Any authenticated |
+
+## Create a Technical Employee
+
+**`POST /api/TechnicalEmployee`**
+
+<ParamField body="name" type="string" required>First name.</ParamField>
+<ParamField body="lastName" type="string" required>Last name.</ParamField>
+<ParamField body="dni" type="string" required>National ID. Must be unique.</ParamField>
+<ParamField body="email" type="string" required>Email. Must be unique.</ParamField>
+<ParamField body="phone" type="string" required>Phone number.</ParamField>
+<ParamField body="address" type="string" required>Address.</ParamField>
+<ParamField body="claimTypes" type="array of long" required>
+  IDs of claim types this technician is qualified to handle. The assignment engine filters by this.
+</ParamField>
+<ParamField body="products" type="array of long" required>
+  IDs of products this technician supports. The assignment engine filters by this.
+</ParamField>
+
+```bash
+curl -X POST http://localhost:8080/api/TechnicalEmployee \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Carlos", "lastName": "Lopez",
+    "dni": "87654321", "email": "carlos@telco.com",
+    "phone": "555-5678", "address": "456 Oak Ave",
+    "claimTypes": [1, 2],
+    "products": [1]
+  }'
+```
+
+Returns HTTP 201 with the created technician including `nroLegajo`.
+
+## Get assigned claims
+
+**`GET /api/TechnicalEmployee/{id}/claims-assigned`**
+
+Returns all pending claims currently assigned to this technician. Requires `ADMIN` or `TECHNICAL_EMPLOYEE` role. Returns HTTP 404 if the technician is not found.
+
+## Update
+
+**`PUT /api/TechnicalEmployee/{id}`** — updates all fields including `claimTypes` and `products` expertise.
+
+## Deactivate
+
+**`DELETE /api/TechnicalEmployee/{id}`** — soft-deactivates the technician record.

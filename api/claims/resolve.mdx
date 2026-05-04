@@ -1,0 +1,60 @@
+---
+title: "POST /api/claims/resolved-claim — resolve a claim"
+description: "Record a solution to close an assigned claim. Sets status to Resuelto, creates a Solution entity linked to the claim, and appends a final ClaimHistory entry."
+---
+
+Use this endpoint to close a claim once the fault has been fixed. The system creates a `Solution` entity with the description and resolution timestamp, moves the claim from pending to resolved, and appends a final `ClaimHistory` entry.
+
+**`POST /api/claims/resolved-claim`** — requires `TECHNICAL_EMPLOYEE` role.
+
+<ParamField body="idClaim" type="long" required>
+  The ID of the claim to resolve. Must be in the authenticated technician's assigned list.
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Description of the fix applied. Stored as the Solution text.
+</ParamField>
+
+```bash
+curl -X POST http://localhost:8080/api/claims/resolved-claim \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idClaim": 5,
+    "description": "Replaced damaged cable segment at junction box B-14. Service restored."
+  }'
+```
+
+## Response
+
+Returns HTTP 200 with the updated claim. The response shape matches `ClaimResponseDto`:
+
+<ResponseField name="id" type="long">
+  The claim ID.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Set to `"Resuelto"`.
+</ResponseField>
+
+<ResponseField name="clientId" type="long">Client ID.</ResponseField>
+<ResponseField name="contractId" type="long">Contract ID.</ResponseField>
+<ResponseField name="productId" type="long">Product ID from the contract.</ResponseField>
+<ResponseField name="claimTypeId" type="long">Claim type ID.</ResponseField>
+<ResponseField name="classification" type="string">`URGENT` or `CRITICAL`.</ResponseField>
+<ResponseField name="description" type="string">The fault description.</ResponseField>
+
+<Note>
+The solution details (description, resolution date, resolving technician) are stored in the `Solution` entity linked to the claim, but are not included in the `ClaimResponseDto`. Use `GET /api/claims/{id}/lifecycle` to retrieve the full audit trail including the solution reference.
+</Note>
+
+## Error responses
+
+| Status | Meaning |
+|--------|---------|
+| 500 | Claim is not in the authenticated technician's assigned list |
+| 404 | Claim not found |
+
+<Note>
+Resolution is final. Resolved claims cannot be re-opened through the API.
+</Note>

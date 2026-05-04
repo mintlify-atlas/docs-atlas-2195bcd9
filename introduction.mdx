@@ -1,0 +1,65 @@
+---
+title: "Claims Management System: what it is and how it works"
+description: "Learn how the Claims Management System automates telecom incident tracking — from registration to resolution — with JWT auth and role-based access control."
+---
+
+The Claims Management System is a Spring Boot REST API built for telecommunications companies. It gives commercial and technical teams a structured workflow for handling service incidents — from the moment a client reports an issue to the moment a technician marks it resolved. Instead of managing claims through spreadsheets or ad-hoc processes, the system enforces consistent status tracking, automates expert assignment, and keeps an immutable audit trail of every state change.
+
+## What it automates
+
+The system targets four key business processes:
+
+**Claim registration** — A sale employee logs an incident by recording the affected client, service contract, claim type, and urgency classification (`URGENT` or `CRITICAL`). The system generates a unique ID, timestamps the entry, and sets the initial status to `Alta` automatically.
+
+**Automatic assignment** — Once registered, the assignment engine selects the most appropriate technical employee without manual intervention. `URGENT` claims route to the expert with the fewest active assignments (minimum workload). `CRITICAL` claims route to the expert with the highest number of resolved claims (maximum experience). The engine filters candidates by claim type and product specialization before applying either rule.
+
+**Claim transfers** — A technical employee can transfer a claim to another qualified expert, providing a motivation. The system records the originating employee, the receiving employee, and the transfer date, then adds a `Transferido` entry to the claim's audit history. The assignment engine re-applies the same selection rules when choosing the destination expert.
+
+**Resolution** — The assigned technical employee records a solution description. The system links the solution to the claim, moves the claim to `Resuelto` status, removes it from the technician's active queue, and logs the resolution in the claim history with the technician reference.
+
+## Technology stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Spring Boot 3.5 |
+| Persistence | Spring Data JPA / MySQL |
+| Security | Spring Security + JWT (JJWT 0.13, HS256) |
+| API docs | SpringDoc OpenAPI 3 / Swagger UI |
+| Language | Java 17 |
+| Build | Maven (included `mvnw` wrapper) |
+
+## Roles in the system
+
+Access to each endpoint is controlled by the role embedded in the caller's JWT token.
+
+<CardGroup cols={2}>
+  <Card title="Sale Employee" icon="user-tie">
+    Registers new claims on behalf of clients, looks up client histories and contract details, and retrieves the full lifecycle audit for any claim. Requires `ROLE_SALE_EMPLOYEE`.
+  </Card>
+  <Card title="Technical Employee" icon="wrench">
+    Resolves assigned claims by recording a solution, or transfers them to another qualified expert with a stated motivation. Requires `ROLE_TECHNICAL_EMPLOYEE`.
+  </Card>
+  <Card title="Admin" icon="shield-halved">
+    Creates and disables user accounts for employees and clients. Admin users carry `ROLE_ADMIN` in addition to their base role. Only admins can call `POST /api/users/employee/register/{id}` and `POST /api/users/client/register/{id}`.
+  </Card>
+  <Card title="Client" icon="user">
+    Authenticates with the API and reads their own claim data. Clients are registered under `ROLE_CLIENT` and do not have write access to claims or employee resources.
+  </Card>
+</CardGroup>
+
+## Explore the docs
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run the server locally and submit your first claim in four steps.
+  </Card>
+  <Card title="Authentication" icon="lock" href="/authentication">
+    Obtain a JWT token and include it in every API request.
+  </Card>
+  <Card title="Domain model" icon="diagram-project" href="/concepts/domain-model">
+    Understand the entities — Claim, Client, Contract, ClaimType, Transfer, and more.
+  </Card>
+  <Card title="Claim lifecycle" icon="timeline" href="/concepts/claim-lifecycle">
+    Trace a claim from Alta through Asignado and Transferido to Resuelto.
+  </Card>
+</CardGroup>

@@ -1,0 +1,91 @@
+---
+title: "Authenticating with the API using JWT bearer tokens"
+description: "Obtain a JWT bearer token by posting credentials to /login, then include it in every subsequent API request using the Authorization header."
+---
+
+The Claims Management System uses stateless JWT authentication. You authenticate once by posting your username and password to `/login`. The server returns a signed HS256 token that encodes your identity and roles. You include that token on every subsequent request — the server validates it without storing any session state.
+
+## Obtain a token
+
+Send a `POST` request to `/login` with your credentials as a JSON body:
+
+```bash
+curl -X POST http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "your_username", "password": "your_password"}'
+```
+
+On success, the server responds with HTTP `200` and this body shape:
+
+```json
+{
+  "token": "eyJ...",
+  "username": "alice",
+  "message": "Bienvenido alice, has iniciado sesión de manera exitosa."
+}
+```
+
+<Note>
+  The token is also returned in the `Authorization: Bearer <token>` response header. You can read it from either location — both contain the same value.
+</Note>
+
+If your credentials are invalid, the server responds with HTTP `401` and an error body:
+
+```json
+{
+  "message": "Error de autenticación, username o password incorrectos.",
+  "error": "<Spring Security error detail>"
+}
+```
+
+## Use the token
+
+Include the token in the `Authorization` header of every subsequent request using the `Bearer` scheme:
+
+```bash
+curl http://localhost:8080/api/claims \
+  -H "Authorization: Bearer eyJ..."
+```
+
+The server strips the `Bearer ` prefix, parses the JWT, and loads your username and roles from the token claims. No database lookup is performed for token validation.
+
+## Token lifetime
+
+<Note>
+  Tokens expire after **1 hour** (3 600 000 ms) from the time of issue. After expiry, re-authenticate by calling `POST /login` again to receive a new token.
+</Note>
+
+<Warning>
+  The signing key (`SECRET_KEY`) is generated fresh each time the server starts using `Jwts.SIG.HS256.key().build()`. Any tokens issued before a server restart are immediately invalidated and cannot be verified. If the server restarts unexpectedly, all active sessions require re-authentication.
+</Warning>
+
+When a token is invalid or expired, the server responds with HTTP `401` and a message explaining the reason:
+
+```json
+{
+  "Error": "<JWT error detail>",
+  "message": "El token es inválido o ha expirado. Por favor, inicie sesión nuevamente para obtener un nuevo token."
+}
+```
+
+## Authentication errors
+
+| HTTP status | Meaning |
+|---|---|
+| `401 Unauthorized` | Credentials are incorrect, the token is missing from the request, or the token is expired or malformed. |
+| `403 Forbidden` | The token is valid and the user is authenticated, but their role does not permit access to the requested endpoint. |
+
+## User roles
+
+Roles are embedded in the JWT as the `authorities` claim when the token is issued. The server reads them from the token on every request — no database role lookup occurs during validation.
+
+The role assigned to your account determines which endpoints you can call:
+
+| Role | Spring authority | Capabilities |
+|---|---|---|
+| Sale Employee | `ROLE_SALE_EMPLOYEE` | Register claims, view claim lifecycle, look up clients |
+| Technical Employee | `ROLE_TECHNICAL_EMPLOYEE` | Transfer claims, resolve claims, view assigned claims |
+| Admin | `ROLE_ADMIN` | Create and disable user accounts for employees and clients |
+| Client | `ROLE_CLIENT` | Read-only access to own claim data |
+
+For a full breakdown of which endpoints each role can reach, see [Roles and permissions](/concepts/roles-and-permissions).

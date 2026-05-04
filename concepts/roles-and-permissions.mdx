@@ -1,0 +1,54 @@
+---
+title: "Roles and permissions: who can access what endpoints"
+description: "Reference for the five JWT-encoded roles — ADMIN, SALE_EMPLOYEE, TECHNICAL_EMPLOYEE, CLIENT, USER — with an endpoint access matrix and 401 vs 403 guidance."
+---
+
+The Claims Management System uses stateless JWT-based authentication with role-based access control (RBAC). When you log in via `POST /login`, the server issues a signed JWT. Your roles are embedded in that token and are validated on every subsequent request by `JwtValidationFilter`. No session is stored server-side.
+
+Roles are additive: every employee and client receives `ROLE_USER` as a base role, plus one or more domain-specific roles depending on their type.
+
+## Roles overview
+
+| Role | Granted to | Key permissions |
+|------|-----------|----------------|
+| `ROLE_ADMIN` | Admin users | Create user accounts for employees and clients; access all resources. |
+| `ROLE_SALE_EMPLOYEE` | Commercial (sale) employees | Register claims; manage clients and contracts; view the claim lifecycle. |
+| `ROLE_TECHNICAL_EMPLOYEE` | Technical/expert employees | View assigned claims; transfer claims to another technician; resolve claims. |
+| `ROLE_CLIENT` | Clients | Limited read access to their own information. |
+| `ROLE_USER` | All authenticated users (employees and clients) | Base role automatically assigned alongside every other role. |
+
+Role assignment is handled by `UserServiceImpl`:
+
+- `createUserForEmployee` — assigns `ROLE_USER` + `ROLE_SALE_EMPLOYEE` or `ROLE_TECHNICAL_EMPLOYEE` depending on the person type, plus `ROLE_ADMIN` if the admin flag is set.
+- `createUserForClient` — assigns `ROLE_USER` + `ROLE_CLIENT`.
+
+## Endpoint access matrix
+
+Method-level security is enforced with `@PreAuthorize` annotations on service methods. The global filter (`SpringSecurityConfig`) requires authentication for every request except the Swagger UI paths.
+
+| Endpoint | Required role |
+|----------|--------------|
+| `POST /login` | Public (no token required) |
+| `POST /api/claims` | `ROLE_SALE_EMPLOYEE` |
+| `GET /api/claims/{id}/lifecycle` | `ROLE_SALE_EMPLOYEE` |
+| `POST /api/claims/claim-transfer` | `ROLE_TECHNICAL_EMPLOYEE` |
+| `POST /api/claims/resolved-claim` | `ROLE_TECHNICAL_EMPLOYEE` |
+| `POST /api/clients` | `ROLE_SALE_EMPLOYEE` |
+| `POST /api/SaleEmployee` | `ROLE_ADMIN` or `ROLE_SALE_EMPLOYEE` |
+| `GET /api/TechnicalEmployee/{id}/claims-assigned` | `ROLE_ADMIN` or `ROLE_TECHNICAL_EMPLOYEE` |
+| `POST /api/users/employee/register/{id}` | `ROLE_ADMIN` |
+| `POST /api/users/client/register/{id}` | `ROLE_ADMIN` |
+| All `GET` endpoints | Any authenticated user |
+
+<Note>
+Swagger UI is publicly accessible without authentication. The paths `/swagger-ui/**`, `/swagger-ui.html`, and `/v3/api-docs/**` are explicitly permitted in `SpringSecurityConfig` so you can explore the API schema without a token.
+</Note>
+
+## 401 vs 403 errors
+
+| Status | Meaning | Common cause |
+|--------|---------|-------------|
+| `401 Unauthorized` | The request is not authenticated. | Missing `Authorization` header, expired JWT, or malformed token. |
+| `403 Forbidden` | The request is authenticated but the token does not include the required role. | Calling `POST /api/claims` with a token that has only `ROLE_CLIENT`, for example. |
+
+If you receive a `401`, obtain a fresh token via `POST /login`. If you receive a `403`, verify that the user account was created with the correct role for the action you are attempting.

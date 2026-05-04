@@ -1,0 +1,77 @@
+---
+title: "How to manage clients and telecom service contracts"
+description: "Register new clients, create contracts linking them to telecom products, and look up records — the prerequisite steps before filing a service incident claim."
+---
+
+Before a claim can be filed, the affected client and their service contract must exist in the system. This guide walks through registering a client and creating a contract linking them to a product (TV, Internet, IP Telephony, etc.).
+
+<Note>
+Requires `SALE_EMPLOYEE` authentication.
+</Note>
+
+## Register a client
+
+<Steps>
+  <Step title="Create the client record">
+    ```bash
+    curl -X POST http://localhost:8080/api/clients \
+      -H "Authorization: Bearer <token>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Juan",
+        "lastName": "Perez",
+        "dni": "45678901",
+        "email": "juan.perez@email.com",
+        "phone": "555-9876",
+        "address": "789 Pine St",
+        "tipoCliente": "RESIDENTIAL"
+      }'
+    ```
+    The response contains the client `id`. DNI and email must be unique across all persons in the system — duplicates return HTTP 400 with field-level validation errors.
+  </Step>
+</Steps>
+
+## Create a service contract
+
+<Steps>
+  <Step title="List available products">
+    ```bash
+    curl http://localhost:8080/api/products \
+      -H "Authorization: Bearer <token>"
+    ```
+    Note the `id` of the product matching the service the client has subscribed to.
+  </Step>
+  <Step title="Create the contract">
+    ```bash
+    curl -X POST http://localhost:8080/api/contracts \
+      -H "Authorization: Bearer <token>" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "clientId": 1,
+        "productId": 2
+      }'
+    ```
+    The response includes the contract `id`, `fechaAlta` (creation date), and `enabled: true`.
+  </Step>
+</Steps>
+
+## Look up client records
+
+```bash
+# Find by national ID
+curl http://localhost:8080/api/clients/dni/45678901 \
+  -H "Authorization: Bearer <token>"
+
+# List all contracts for a client
+curl http://localhost:8080/api/clients/1/contracts \
+  -H "Authorization: Bearer <token>"
+```
+
+## Update and deactivate
+
+- **Update** a client: `PUT /api/clients/{id}` — only `email`, `phone`, and `address` can be changed; `dni` and name are immutable.
+- **Deactivate** a client: `DELETE /api/clients/{id}` — soft-deactivates the record without deleting data.
+
+<Tip>
+Once a client and contract exist, you're ready to file a claim. See [Registering a claim](/guides/registering-a-claim).
+</Tip>
